@@ -48,6 +48,7 @@ ota:
 # This should point to the public location of this yaml file.
 dashboard_import:
   package_import_url: github://esphome/esphome-project-template/project-template-esp32.yaml@v6
+  github://jvinckers/modbus-master-growatt/esphome/modbus-master-growatt.yaml
   import_full_config: false # or true
 
 # Sets up Bluetooth LE (Only on ESP32) to allow the user
