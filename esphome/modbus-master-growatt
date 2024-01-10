@@ -1,0 +1,268 @@
+substitutions:
+  friendly_name: ModBus
+substitutions:
+  name: "modbus-master-growatt"
+  friendly_name: "Modbus Master For Growatt inverter for ESPHome"
+  
+esphome:
+  name: "${name}"
+  # Friendly names are used where appropriate in Home Assistant
+  friendly_name: "${friendly_name}"
+  # Automatically add the mac address to the name
+  # so you can use a single firmware for all devices
+  name_add_mac_suffix: true
+
+  # This will allow for (future) project identification,
+  # configuration and updates.
+  project:
+    name: esphome.modbus-master-growatt
+    version: "1.0"
+esp32:
+  board: esp32-s3-devkitc-1
+  framework:
+    type: arduino
+
+# Enable logging
+logger:
+  level: DEBUG
+  # disable putting logging on the HW UART
+  baud_rate: 0  
+
+# Enable Home Assistant API
+api:
+  encryption:
+    key: !secret api-key
+  
+  on_client_connected:
+    - output.turn_on: led_ha
+    - output.set_level:
+        id: led_ha
+        level: "50%"
+
+  on_client_disconnected:
+    - output.turn_off: led_ha
+  
+ota:
+  password: !secret ota-password
+
+# This should point to the public location of this yaml file.
+dashboard_import:
+  package_import_url: github://esphome/esphome-project-template/project-template-esp32.yaml@v6
+  import_full_config: false # or true
+
+# Sets up Bluetooth LE (Only on ESP32) to allow the user
+# to provision wifi credentials to the device.
+esp32_improv:
+  authorizer: none
+
+# Sets up the improv via serial client for Wi-Fi provisioning
+improv_serial:
+  next_url: https://example.com/project-template/manual?ip={{ip_address}}&name={{device_name}}&version={{esphome_version}}
+  
+ 
+wifi:
+  # Enable fallback hotspot (captive portal) in case wifi connection fails
+  ap:
+
+  on_connect:
+    - output.turn_on: led_wifi
+    - output.set_level:
+        id: led_wifi
+        level: "50%"
+  on_disconnect:
+    - output.turn_off: led_wifi
+  
+captive_portal:
+
+web_server:
+  port: 80
+
+output:
+  - platform: ledc
+    pin: GPIO5
+    id: led_wifi
+
+  - platform: ledc
+    pin: GPIO6
+    id: led_modbus
+
+  - platform: ledc
+    pin: GPIO7
+    id: led_ha
+
+uart:
+  id: mod_bus
+  tx_pin: GPIO11
+  rx_pin: GPIO9
+  baud_rate: 9600
+
+modbus:
+  id: modbus1
+  uart_id: mod_bus
+  flow_control_pin: GPIO10
+
+modbus_controller:
+  - id: growatt
+    address: 0x1 # the Modbus device addr
+    modbus_id: modbus1
+    setup_priority: -10  
+    update_interval: 10s
+
+sensor:
+  - platform: uptime
+    name: Uptime Sensor
+
+  - platform: modbus_controller
+    modbus_controller_id: growatt
+    name: "${friendly_name} DcPower"
+    address: 5
+    register_type: "read"
+    unit_of_measurement: W
+    device_class: power
+    icon: mdi:flash
+    value_type: U_DWORD
+    accuracy_decimals: 1
+    filters:
+    - multiply: 0.1
+    - timeout:
+        timeout: 10s
+        value: 0
+        
+  - platform: modbus_controller
+    modbus_controller_id: growatt
+    name: "${friendly_name} DcVoltage"
+    address: 3
+    register_type: "read"
+    unit_of_measurement: V
+    device_class: voltage
+    icon: mdi:flash
+    value_type: U_WORD
+    accuracy_decimals: 1
+    filters:
+    - multiply: 0.1
+    - timeout:
+        timeout: 10s
+        value: 0
+    
+  - platform: modbus_controller
+    modbus_controller_id: growatt
+    name: "${friendly_name} DcInputCurrent"
+    address: 4
+    register_type: "read"
+    unit_of_measurement: A
+    device_class: current
+    icon: mdi:flash
+    value_type: U_WORD
+    accuracy_decimals: 1
+    filters:
+    - multiply: 0.1
+    - timeout:
+        timeout: 10s
+        value: 0
+    
+  - platform: modbus_controller
+    modbus_controller_id: growatt
+    name: "${friendly_name} AcFrequency"
+    address: 37
+    register_type: "read"
+    unit_of_measurement: Hz
+    icon: mdi:flash
+    value_type: U_WORD
+    accuracy_decimals: 1
+    filters:
+    - multiply: 0.01
+  
+  - platform: modbus_controller
+    modbus_controller_id: growatt
+    name: "${friendly_name} AcVoltage"
+    address: 38
+    register_type: "read"
+    unit_of_measurement: V
+    device_class: voltage
+    icon: mdi:flash
+    value_type: U_WORD
+    accuracy_decimals: 1
+    filters:
+    - multiply: 0.1
+  
+  - platform: modbus_controller
+    modbus_controller_id: growatt
+    name: "${friendly_name} AcOutputCurrent"
+    address: 39
+    register_type: "read"
+    unit_of_measurement: A
+    device_class: current
+    icon: mdi:flash
+    value_type: U_WORD
+    accuracy_decimals: 1
+    filters:
+    - multiply: 0.1
+    
+  - platform: modbus_controller
+    modbus_controller_id: growatt
+    name: "${friendly_name} AcPower"
+    address: 40
+    register_type: "read"
+    unit_of_measurement: W
+    device_class: power
+    icon: mdi:flash
+    value_type: U_DWORD
+    accuracy_decimals: 1
+    filters:
+    - multiply: 0.1
+    - timeout:
+        timeout: 30s
+        value: 0
+    
+  - platform: modbus_controller
+    modbus_controller_id: growatt
+    name: "${friendly_name} EnergyToday"
+    address: 53
+    register_type: "read"
+    unit_of_measurement: kWh
+    device_class: energy
+    icon: mdi:flash
+    value_type: U_DWORD
+    accuracy_decimals: 1
+    filters:
+    - multiply: 0.1
+    - timeout:
+        timeout: 10s
+    
+  - platform: modbus_controller
+    modbus_controller_id: growatt
+    name: "${friendly_name} EnergyTotal"
+    address: 55
+    register_type: "read"
+    unit_of_measurement: kWh
+    state_class: total_increasing
+    device_class: energy
+    icon: mdi:flash
+    value_type: U_DWORD
+    accuracy_decimals: 1
+    filters:
+    - multiply: 0.1
+    - timeout:
+        timeout: 10s
+
+  - platform: modbus_controller
+    modbus_controller_id: growatt
+    name: "${friendly_name} Temperature"
+    address: 93
+    register_type: "read"
+    unit_of_measurement: C
+    device_class: temperature
+    icon: mdi:thermometer
+    value_type: U_WORD
+    accuracy_decimals: 1
+    filters:
+    - multiply: 0.1
+
+  - platform: modbus_controller
+    modbus_controller_id: growatt
+    name: "${friendly_name} Output Percentage"
+    address: 101
+    register_type: "read"
+    unit_of_measurement: "%"
+    icon: mdi:percent
+    value_type: S_WORD
